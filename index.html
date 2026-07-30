@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AgentBuild - Multi-Agent AI Builder</title>
+    <title>AgentBuild - AI Builder</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,141 +11,307 @@
         body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #e5e5e5; }
         .glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
         .thread-line { border-left: 2px solid #333; padding-left: 12px; margin-left: 12px; }
-        .typing span { display: inline-block; width: 6px; height: 6px; background: #555; border-radius: 50%; animation: blink 1.4s infinite both; margin-right: 2px;}
-        .typing span:nth-child(2) { animation-delay: .2s; }
-        .typing span:nth-child(3) { animation-delay: .4s; }
-        @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #111; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
     </style>
 </head>
 <body class="h-screen flex flex-col overflow-hidden">
 
-    <!-- Top Nav -->
-    <header class="bg-zinc-900/80 backdrop-blur border-b border-zinc-800 p-3 flex items-center justify-between z-50">
-        <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg flex items-center justify-center glow">
-                <i class="fa-solid fa-robot text-white text-sm"></i>
+    <!-- ================= HOME SCREEN ================= -->
+    <div id="view-home" class="flex-1 overflow-y-auto">
+        <header class="max-w-5xl mx-auto px-6 py-4 flex justify-between items-center border-b border-zinc-800">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg flex items-center justify-center glow">
+                    <i class="fa-solid fa-robot text-white text-sm"></i>
+                </div>
+                <h1 class="text-xl font-bold">AgentBuild</h1>
             </div>
-            <h1 class="text-base font-bold tracking-wide hidden sm:block">AgentBuild</h1>
-        </div>
-        
-        <div class="flex items-center gap-2">
-            <button onclick="switchTab('chat')" id="btn-chat" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800 text-white">
-                <i class="fa-solid fa-comments sm:mr-1"></i> <span class="hidden sm:inline">Chat</span>
+            <button onclick="openSettings()" class="text-sm px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700">
+                <i class="fa-solid fa-gear mr-1"></i> Settings
             </button>
-            <button onclick="switchTab('preview')" id="btn-preview" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 text-zinc-400">
-                <i class="fa-solid fa-eye sm:mr-1"></i> <span class="hidden sm:inline">Preview</span>
-            </button>
-            <button onclick="switchTab('db')" id="btn-db" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 text-zinc-400">
-                <i class="fa-solid fa-database sm:mr-1"></i> <span class="hidden sm:inline">Database</span>
-            </button>
-        </div>
+        </header>
 
-        <button onclick="openSettings()" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700">
-            <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline ml-1">Agents</span>
-        </button>
-    </header>
-
-    <!-- Main Content -->
-    <div class="flex-1 flex overflow-hidden">
-        
-        <!-- Chat Panel -->
-        <aside id="panel-chat" class="w-full md:w-[420px] flex-shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
-            <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4">
-                <div class="bg-zinc-900 p-3 rounded-lg max-w-[90%]">
-                    <p class="text-sm text-zinc-300">Welcome to AgentBuild. Configure your AI team in settings, then tell them what to build. They will discuss, plan, and wait for your approval to build.</p>
-                </div>
+        <main class="max-w-5xl mx-auto px-6 py-10">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold">Your Projects</h2>
+                <button onclick="createNewProject()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-plus"></i> New Project
+                </button>
             </div>
 
-            <div class="p-3 border-t border-zinc-800">
-                <div class="bg-zinc-800 rounded-lg p-2 flex flex-col">
-                    <textarea id="user-input" placeholder="e.g. Build an online shoe store..." class="bg-transparent text-sm p-2 resize-none focus:outline-none h-16"></textarea>
-                    <div class="flex justify-between items-center mt-2 px-2">
-                        <span class="text-xs text-zinc-500">Multi-Agent Mode</span>
-                        <button id="send-btn" onclick="startAgentWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold transition">
-                            Send <i class="fa-solid fa-paper-plane ml-1"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </aside>
-
-        <!-- Right Side Panel (Preview & DB) -->
-        <main class="flex-1 hidden md:flex flex-col overflow-hidden">
-            <!-- Preview Sub-panel -->
-            <div id="panel-preview" class="flex-1 bg-white overflow-hidden flex flex-col">
-                <div class="bg-zinc-900 p-2 flex justify-between items-center text-xs text-zinc-400 px-4">
-                    <span><i class="fa-solid fa-circle text-green-500 mr-1"></i> Live Preview</span>
-                    <button onclick="refreshIframe()" class="hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
-                </div>
-                <iframe id="preview-frame" class="w-full flex-1 border-none"></iframe>
-            </div>
-
-            <!-- DB Sub-panel -->
-            <div id="panel-db" class="hidden flex-1 overflow-auto bg-zinc-950 p-4">
-                <div class="max-w-full overflow-x-auto">
-                    <h3 class="text-lg font-bold mb-4 text-white">Simulated Database Schema & Data</h3>
-                    <div id="db-tables-container" class="space-y-6">
-                        <div class="text-zinc-500 text-sm">The AI will generate database tables and mock data here when building your app.</div>
-                    </div>
-                </div>
+            <div id="projects-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Projects injected here -->
             </div>
         </main>
     </div>
 
-    <!-- Settings Modal -->
+    <!-- ================= BUILDER SCREEN ================= -->
+    <div id="view-builder" class="hidden flex-1 flex flex-col overflow-hidden">
+        <!-- Top Nav -->
+        <header class="bg-zinc-900/80 backdrop-blur border-b border-zinc-800 p-3 flex items-center justify-between z-50">
+            <div class="flex items-center gap-3">
+                <button onclick="goHome()" class="text-zinc-400 hover:text-white text-sm">
+                    <i class="fa-solid fa-arrow-left mr-1"></i> Home
+                </button>
+                <input type="text" id="project-title-input" class="bg-transparent font-bold text-sm focus:outline-none focus:border-b focus:border-blue-500" onblur="saveCurrentProject()">
+            </div>
+            
+            <div class="flex items-center gap-2">
+                <button onclick="switchTab('chat')" id="btn-chat" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800 text-white">
+                    <i class="fa-solid fa-comments sm:mr-1"></i> <span class="hidden sm:inline">Chat</span>
+                </button>
+                <button onclick="switchTab('preview')" id="btn-preview" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 text-zinc-400">
+                    <i class="fa-solid fa-eye sm:mr-1"></i> <span class="hidden sm:inline">Preview</span>
+                </button>
+                <button onclick="switchTab('db')" id="btn-db" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 text-zinc-400">
+                    <i class="fa-solid fa-database sm:mr-1"></i> <span class="hidden sm:inline">Data</span>
+                </button>
+            </div>
+
+            <button onclick="saveCurrentProject()" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700">
+                <i class="fa-solid fa-save"></i> <span class="hidden sm:inline ml-1">Save</span>
+            </button>
+        </header>
+
+        <!-- Main Content -->
+        <div class="flex-1 flex overflow-hidden">
+            
+            <!-- Chat Panel -->
+            <aside id="panel-chat" class="w-full md:w-[420px] flex-shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
+                <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4">
+                    <!-- Chat messages injected here -->
+                </div>
+
+                <div class="p-3 border-t border-zinc-800">
+                    <div class="bg-zinc-800 rounded-lg p-2 flex flex-col">
+                        <textarea id="user-input" placeholder="Describe your app..." class="bg-transparent text-sm p-2 resize-none focus:outline-none h-16"></textarea>
+                        <div class="flex justify-between items-center mt-2 px-2">
+                            <span class="text-xs text-zinc-500" id="mode-indicator">Multi-Agent Mode</span>
+                            <button id="send-btn" onclick="handleSend()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold transition">
+                                Send <i class="fa-solid fa-paper-plane ml-1"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- Right Side Panel (Preview & DB) -->
+            <main class="flex-1 hidden md:flex flex-col overflow-hidden">
+                <!-- Preview Sub-panel -->
+                <div id="panel-preview" class="flex-1 bg-white overflow-hidden flex flex-col">
+                    <div class="bg-zinc-900 p-2 flex justify-between items-center text-xs text-zinc-400 px-4">
+                        <span><i class="fa-solid fa-circle text-green-500 mr-1"></i> Live Preview</span>
+                        <button onclick="refreshIframe()" class="hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
+                    </div>
+                    <iframe id="preview-frame" class="w-full flex-1 border-none"></iframe>
+                </div>
+
+                <!-- DB Sub-panel -->
+                <div id="panel-db" class="hidden flex-1 overflow-auto bg-zinc-950 p-4">
+                    <div class="max-w-full overflow-x-auto">
+                        <h3 class="text-lg font-bold mb-4 text-white">Simulated Database Schema & Data</h3>
+                        <div id="db-tables-container" class="space-y-6">
+                            <div class="text-zinc-500 text-sm">The AI will generate database tables and mock data here when building your app.</div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- ================= SETTINGS MODAL ================= -->
     <div id="settings-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
         <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div class="sticky top-0 bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center">
-                <h2 class="text-xl font-bold">Agent Settings</h2>
+            <div class="sticky top-0 bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center z-10">
+                <h2 class="text-xl font-bold">Settings</h2>
                 <button onclick="closeSettings()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
             </div>
             
-            <div class="p-4 space-y-4">
-                <!-- Global API Config -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs text-zinc-400 block mb-1">Global API Base URL</label>
-                        <input id="setting-base-url" type="text" value="https://api.openai.com/v1" class="w-full bg-zinc-800 text-sm px-3 py-2 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
-                    </div>
-                    <div>
-                        <label class="text-xs text-zinc-400 block mb-1">Global API Key</label>
-                        <input id="setting-api-key" type="password" placeholder="sk-..." class="w-full bg-zinc-800 text-sm px-3 py-2 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
+            <div class="p-4 space-y-6">
+                <!-- API Config -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-bold text-zinc-400 uppercase">API Configuration</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs text-zinc-400 block mb-1">Base URL</label>
+                            <input id="setting-base-url" type="text" placeholder="https://api.openai.com/v1" class="w-full bg-zinc-800 text-sm px-3 py-2 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="text-xs text-zinc-400 block mb-1">API Key</label>
+                            <div class="flex gap-2">
+                                <input id="setting-api-key" type="password" placeholder="sk-..." class="w-full bg-zinc-800 text-sm px-3 py-2 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
+                                <button onclick="fetchModels()" class="bg-zinc-700 hover:bg-zinc-600 px-3 rounded text-xs whitespace-nowrap">Fetch Models</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
                 <hr class="border-zinc-800">
 
-                <p class="text-sm text-zinc-400">Configure your agents. Each can use a different model.</p>
-                
-                <div id="agents-config-container" class="space-y-4">
-                    <!-- Agent configs injected by JS -->
+                <!-- Mode Toggle -->
+                <div class="flex items-center justify-between bg-zinc-800 p-3 rounded-lg">
+                    <div>
+                        <h3 class="font-bold text-sm">Multi-Agent Mode</h3>
+                        <p class="text-xs text-zinc-400">Uses Leader, Dev, Design, and QA agents to discuss before building.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="setting-agent-mode" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                </div>
+
+                <!-- Agent Config -->
+                <div id="agents-config-wrapper" class="space-y-4">
+                    <h3 class="text-sm font-bold text-zinc-400 uppercase">Agent Models</h3>
+                    <div id="agents-config-container" class="space-y-3">
+                        <!-- Agent configs injected by JS -->
+                    </div>
                 </div>
             </div>
             
             <div class="sticky bottom-0 bg-zinc-900 p-4 border-t border-zinc-800 flex justify-end gap-2">
-                <button onclick="closeSettings()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-sm">Save & Close</button>
+                <button onclick="closeSettings()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-sm font-bold">Save & Close</button>
             </div>
         </div>
     </div>
 
     <script>
         // --- State Management ---
-        const defaultAgents = [
+        const STORAGE_KEY = 'agentBuildState_v1';
+        const DEFAULT_AGENTS = [
             { id: 'lead', name: 'Lead', role: 'Leader', model: 'gpt-4o', icon: 'fa-crown', color: 'text-amber-400', systemPrompt: 'You are the Lead Agent. You read the discussion of your team, create a concise plan, and finally write the full HTML/CSS/JS code. You also define the database schema and mock data using tools.' },
             { id: 'dev', name: 'Dev', role: 'Developer', model: 'gpt-4o-mini', icon: 'fa-code', color: 'text-blue-400', systemPrompt: 'You are the Dev Agent. You suggest technical implementation, libraries, and logic. Keep it brief.' },
             { id: 'design', name: 'Design', role: 'Designer', model: 'gpt-4o-mini', icon: 'fa-paintbrush', color: 'text-pink-400', systemPrompt: 'You are the Design Agent. You suggest UI/UX, colors, and layout. Keep it brief.' },
             { id: 'tester', name: 'QA', role: 'Tester', model: 'gpt-4o-mini', icon: 'fa-bug', color: 'text-green-400', systemPrompt: 'You are the QA Agent. You suggest test cases and edge cases to consider. Keep it brief.' }
         ];
-        let agents = JSON.parse(JSON.stringify(defaultAgents));
-        let conversationState = [];
 
-        // --- UI Switching ---
+        let state = {
+            settings: { baseUrl: 'https://api.openai.com/v1', apiKey: '', models: [], agentMode: true },
+            agents: JSON.parse(JSON.stringify(DEFAULT_AGENTS)),
+            projects: [],
+            currentProjectId: null
+        };
+
+        function loadState() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                state = { ...state, ...parsed };
+                // Ensure agents have all required fields if schema changed
+                state.agents = DEFAULT_AGENTS.map(da => {
+                    const saved = parsed.agents?.find(a => a.id === da.id);
+                    return saved ? { ...da, ...saved } : da;
+                });
+            }
+        }
+
+        function saveState() {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        }
+
+        // --- Project Management ---
+        function createNewProject() {
+            const newProj = {
+                id: 'proj_' + Date.now(),
+                title: 'Untitled Project',
+                history: [],
+                dbTables: [],
+                code: ''
+            };
+            state.projects.push(newProj);
+            state.currentProjectId = newProj.id;
+            saveState();
+            showBuilder();
+        }
+
+        function openProject(id) {
+            state.currentProjectId = id;
+            saveState();
+            showBuilder();
+        }
+
+        function deleteProject(id, e) {
+            e.stopPropagation();
+            state.projects = state.projects.filter(p => p.id !== id);
+            saveState();
+            renderHome();
+        }
+
+        function saveCurrentProject() {
+            if (!state.currentProjectId) return;
+            const proj = state.projects.find(p => p.id === state.currentProjectId);
+            if (!proj) return;
+
+            proj.title = document.getElementById('project-title-input').value;
+            proj.history = Array.from(document.getElementById('chat-history').children).map(el => el.outerHTML);
+            proj.dbTables = document.getElementById('db-tables-container').innerHTML;
+            proj.code = document.getElementById('preview-frame').srcdoc;
+            
+            saveState();
+        }
+
+        function getCurrentProject() {
+            return state.projects.find(p => p.id === state.currentProjectId);
+        }
+
+        // --- View Routing ---
+        function showHome() {
+            saveCurrentProject();
+            document.getElementById('view-home').classList.remove('hidden');
+            document.getElementById('view-builder').classList.add('hidden');
+            renderHome();
+        }
+
+        function showBuilder() {
+            document.getElementById('view-home').classList.add('hidden');
+            document.getElementById('view-builder').classList.remove('hidden');
+            document.getElementById('view-builder').classList.add('flex');
+            
+            const proj = getCurrentProject();
+            if (!proj) return showHome();
+
+            document.getElementById('project-title-input').value = proj.title;
+            document.getElementById('chat-history').innerHTML = proj.history.length ? proj.history.join('') : '';
+            document.getElementById('db-tables-container').innerHTML = proj.dbTables || '<div class="text-zinc-500 text-sm">The AI will generate database tables and mock data here when building your app.</div>';
+            document.getElementById('preview-frame').srcdoc = proj.code || '';
+            
+            document.getElementById('mode-indicator').innerText = state.settings.agentMode ? 'Multi-Agent Mode' : 'Single Agent Mode';
+            
+            switchTab('chat');
+        }
+
+        function goHome() {
+            showHome();
+        }
+
+        // --- UI Rendering ---
+        function renderHome() {
+            const grid = document.getElementById('projects-grid');
+            if (state.projects.length === 0) {
+                grid.innerHTML = '<div class="col-span-full text-center py-16 text-zinc-500"><i class="fa-solid fa-folder-open text-4xl mb-3"></i><p>No projects yet. Click "New Project" to start.</p></div>';
+                return;
+            }
+
+            grid.innerHTML = state.projects.map(proj => `
+                <div onclick="openProject('${proj.id}')" class="bg-zinc-900 border border-zinc-800 rounded-xl p-4 hover:border-blue-500 transition cursor-pointer relative group">
+                    <button onclick="deleteProject('${proj.id}', event)" class="absolute top-3 right-3 text-zinc-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                    <div class="w-10 h-10 bg-zinc-800 rounded-lg flex items-center justify-center mb-3">
+                        <i class="fa-solid fa-code text-blue-400"></i>
+                    </div>
+                    <h3 class="font-bold text-sm truncate">${proj.title}</h3>
+                    <p class="text-xs text-zinc-500 mt-1">${new Date(proj.id.split('_')[1] * 1).toLocaleDateString()}</p>
+                </div>
+            `).join('');
+        }
+
         function switchTab(tab) {
-            const panels = ['chat', 'preview', 'db'];
-            panels.forEach(p => {
-                document.getElementById(`panel-${p}`).classList.add('hidden');
-                document.getElementById(`panel-${p}`).classList.remove('flex');
-                if(p === 'preview' || p === 'db') document.getElementById(`panel-${p}`).classList.remove('md:flex');
+            ['chat', 'preview', 'db'].forEach(p => {
+                const panel = document.getElementById(`panel-${p}`);
+                panel.classList.add('hidden');
+                panel.classList.remove('flex', 'md:flex');
                 
                 const btn = document.getElementById(`btn-${p}`);
                 btn.classList.remove('bg-zinc-800', 'text-white');
@@ -156,53 +322,87 @@
             panel.classList.remove('hidden');
             if(tab === 'chat') {
                 panel.classList.add('flex');
-                document.getElementById(`btn-${tab}`).classList.add('bg-zinc-800', 'text-white');
             } else {
                 panel.classList.add('flex', 'md:flex');
-                document.getElementById(`btn-${tab}`).classList.add('bg-zinc-800', 'text-white');
             }
+            
+            document.getElementById(`btn-${tab}`).classList.add('bg-zinc-800', 'text-white');
         }
 
         // --- Settings Modal ---
         function openSettings() {
+            document.getElementById('setting-base-url').value = state.settings.baseUrl;
+            document.getElementById('setting-api-key').value = state.settings.apiKey;
+            document.getElementById('setting-agent-mode').checked = state.settings.agentMode;
             renderAgentConfigs();
             document.getElementById('settings-modal').classList.remove('hidden');
         }
 
         function closeSettings() {
-            saveAgentConfigs();
+            state.settings.baseUrl = document.getElementById('setting-base-url').value;
+            state.settings.apiKey = document.getElementById('setting-api-key').value;
+            state.settings.agentMode = document.getElementById('setting-agent-mode').checked;
+            
+            // Save agent models
+            document.querySelectorAll('#agents-config-container select').forEach(sel => {
+                const id = sel.dataset.id;
+                const agent = state.agents.find(a => a.id === id);
+                if (agent) agent.model = sel.value;
+            });
+
+            document.getElementById('mode-indicator').innerText = state.settings.agentMode ? 'Multi-Agent Mode' : 'Single Agent Mode';
+            
+            saveState();
             document.getElementById('settings-modal').classList.add('hidden');
         }
 
         function renderAgentConfigs() {
             const container = document.getElementById('agents-config-container');
-            container.innerHTML = '';
-            agents.forEach((agent, index) => {
-                const div = document.createElement('div');
-                div.className = 'bg-zinc-800 p-3 rounded-lg';
-                div.innerHTML = `
-                    <div class="flex items-center gap-2 mb-2">
-                        <i class="fa-solid ${agent.icon} ${agent.color}"></i>
-                        <input type="text" value="${agent.name}" data-index="${index}" data-field="name" class="bg-transparent font-bold text-white text-sm outline-none border-b border-transparent focus:border-blue-500">
-                        <span class="text-xs text-zinc-500 ml-auto">${agent.role}</span>
+            const isAgentMode = document.getElementById('setting-agent-mode').checked;
+            
+            if (!isAgentMode) {
+                container.innerHTML = '<p class="text-xs text-zinc-500">Single Agent Mode is ON. Only the Lead agent will be used.</p>';
+                return;
+            }
+
+            container.innerHTML = state.agents.map(agent => `
+                <div class="bg-zinc-800 p-3 rounded-lg flex items-center gap-3">
+                    <i class="fa-solid ${agent.icon} ${agent.color}"></i>
+                    <div class="flex-1">
+                        <div class="text-sm font-bold">${agent.name} <span class="text-xs text-zinc-500 font-normal">(${agent.role})</span></div>
                     </div>
-                    <input type="text" value="${agent.model}" data-index="${index}" data-field="model" placeholder="Model (e.g. gpt-4o)" class="w-full bg-zinc-900 text-sm px-2 py-1 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
-                `;
-                container.appendChild(div);
-            });
+                    <select data-id="${agent.id}" class="bg-zinc-900 text-sm px-2 py-1.5 rounded border border-zinc-700 focus:outline-none focus:border-blue-500 w-40">
+                        ${state.settings.models.map(m => `<option value="${m}" ${m === agent.model ? 'selected' : ''}>${m}</option>`).join('')}
+                    </select>
+                </div>
+            `).join('');
         }
 
-        function saveAgentConfigs() {
-            const inputs = document.querySelectorAll('#agents-config-container input');
-            inputs.forEach(input => {
-                const index = input.dataset.index;
-                const field = input.dataset.field;
-                agents[index][field] = input.value;
-            });
+        async function fetchModels() {
+            const baseUrl = document.getElementById('setting-base-url').value;
+            const apiKey = document.getElementById('setting-api-key').value;
+            
+            if (!baseUrl || !apiKey) return alert("Please enter Base URL and API Key first.");
+            
+            try {
+                const res = await fetch(`${baseUrl}/models`, {
+                    headers: { 'Authorization': `Bearer ${apiKey}` }
+                });
+                const data = await res.json();
+                if (data.data) {
+                    state.settings.models = data.data.map(m => m.id).sort();
+                    saveState();
+                    renderAgentConfigs();
+                } else {
+                    alert("Failed to fetch models: " + JSON.stringify(data.error || data));
+                }
+            } catch (e) {
+                alert("Error fetching models: " + e.message);
+            }
         }
 
         // --- Chat UI ---
-        function addChatMessage(sender, content, isThread = false, parentRole = null) {
+        function addChatMessage(sender, content, isThread = false) {
             const history = document.getElementById('chat-history');
             const div = document.createElement('div');
             
@@ -213,70 +413,37 @@
                 div.className = 'bg-zinc-800 p-2 rounded-lg max-w-[90%] text-center';
                 div.innerHTML = `<p class="text-xs text-zinc-400">${content}</p>`;
             } else {
-                const agent = agents.find(a => a.id === sender);
-                if (isThread) {
-                    div.className = 'thread-line my-2';
-                    div.innerHTML = `
-                        <div class="flex items-center gap-1.5 mb-1">
-                            <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
-                            <span class="text-xs font-bold ${agent.color}">${agent.name}</span>
-                        </div>
-                        <p class="text-sm text-zinc-300 whitespace-pre-line">${content}</p>
-                    `;
-                } else {
-                    div.className = 'bg-zinc-900 p-3 rounded-lg max-w-[90%]';
-                    div.innerHTML = `
-                        <div class="flex items-center gap-1.5 mb-1">
-                            <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
-                            <span class="text-xs font-bold ${agent.color}">${agent.name}</span>
-                        </div>
-                        <p class="text-sm text-zinc-300 whitespace-pre-line">${content}</p>
-                    `;
-                }
+                const agent = state.agents.find(a => a.id === sender);
+                const wrapperClass = isThread ? 'thread-line my-2' : 'bg-zinc-900 p-3 rounded-lg max-w-[90%]';
+                div.className = wrapperClass;
+                div.innerHTML = `
+                    <div class="flex items-center gap-1.5 mb-1">
+                        <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
+                        <span class="text-xs font-bold ${agent.color}">${agent.name}</span>
+                    </div>
+                    <div class="text-sm text-zinc-300 whitespace-pre-line">${content}</div>
+                `;
             }
             history.appendChild(div);
             history.scrollTop = history.scrollHeight;
             return div;
         }
 
-        function showTyping(agentId, isThread = false) {
-            const agent = agents.find(a => a.id === agentId);
-            const history = document.getElementById('chat-history');
-            const div = document.createElement('div');
-            div.id = `typing-${agentId}-${Math.random().toString(36).substr(2,5)}`;
-            
-            if (isThread) {
-                div.className = 'thread-line my-2';
-            } else {
-                div.className = 'bg-zinc-900 p-3 rounded-lg max-w-[90%]';
-            }
-            
-            div.innerHTML = `
-                <div class="flex items-center gap-1.5">
-                    <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
-                    <span class="text-xs font-bold ${agent.color}">${agent.name} is thinking</span>
-                    <div class="typing"><span></span><span></span><span></span></div>
-                </div>
-            `;
-            history.appendChild(div);
-            history.scrollTop = history.scrollHeight;
-            return div.id;
-        }
-
         // --- API & Agent Logic ---
         async function callLLM(agentId, messages) {
-            const agent = agents.find(a => a.id === agentId);
-            const baseUrl = document.getElementById('setting-base-url').value;
-            const apiKey = document.getElementById('setting-api-key').value;
+            const agent = state.agents.find(a => a.id === agentId);
+            const { baseUrl, apiKey } = state.settings;
 
-            if (!apiKey) return "Error: API Key not set in Agent Settings.";
+            if (!apiKey) {
+                return { content: "Error: API Key not set in Settings." };
+            }
 
             const tools = [
                 {
                     type: "function",
                     function: {
                         name: "create_database_table",
-                        description: "Create a database table with mock data for the application being built.",
+                        description: "Create a database table with mock data for the application.",
                         parameters: {
                             type: "object",
                             properties: {
@@ -311,110 +478,134 @@
             }
         }
 
-        async function startAgentWorkflow() {
+        async function handleSend() {
             const input = document.getElementById('user-input');
             const prompt = input.value.trim();
             if (!prompt) return;
 
             addChatMessage('user', prompt);
             input.value = '';
-            conversationState = [{ role: "user", content: prompt }];
-
-            // 1. Discussion Phase
-            addChatMessage('system', 'Phase 1: Team Discussion...');
-            const discussion = [];
-
-            // Dev
-            let typingEl = showTyping('dev', true);
-            let devMsg = await callLLM('dev', [{ role: "system", content: agents[1].systemPrompt }, ...conversationState]);
-            document.getElementById(typingEle).remove();
-            addChatMessage('dev', devMsg.content, true);
-            discussion.push({ role: "Dev", content: devMsg.content });
-
-            // Design
-            typingEle = showTyping('design', true);
-            let designMsg = await callLLM('design', [{ role: "system", content: agents[2].systemPrompt }, ...conversationState]);
-            document.getElementById(typingEle).remove();
-            addChatMessage('design', designMsg.content, true);
-            discussion.push({ role: "Design", content: designMsg.content });
-
-            // Tester
-            typingEle = showTyping('tester', true);
-            let testerMsg = await callLLM('tester', [{ role: "system", content: agents[3].systemPrompt }, ...conversationState]);
-            document.getElementById(typingEle).remove();
-            addChatMessage('tester', testerMsg.content, true);
-            discussion.push({ role: "QA", content: testerMsg.content });
-
-            // 2. Lead Planning Phase
-            addChatMessage('system', 'Phase 2: Lead is reviewing & planning...');
-            typingEle = showTyping('lead');
             
-            const leadPrompt = `
-                User Request: ${prompt}
+            let conversationHistory = [{ role: "user", content: prompt }];
+            let finalLeadCode = "";
+
+            if (state.settings.agentMode) {
+                addChatMessage('system', 'Phase 1: Team Discussion...');
+                const discussion = [];
+
+                // Dev
+                let devMsg = await callLLM('dev', [{ role: "system", content: state.agents[1].systemPrompt }, ...conversationHistory]);
+                addChatMessage('dev', devMsg.content, true);
+                discussion.push({ role: "Dev", content: devMsg.content });
+
+                // Design
+                let designMsg = await callLLM('design', [{ role: "system", content: state.agents[2].systemPrompt }, ...conversationHistory]);
+                addChatMessage('design', designMsg.content, true);
+                discussion.push({ role: "Design", content: designMsg.content });
+
+                // Tester
+                let testerMsg = await callLLM('tester', [{ role: "system", content: state.agents[3].systemPrompt }, ...conversationHistory]);
+                addChatMessage('tester', testerMsg.content, true);
+                discussion.push({ role: "QA", content: testerMsg.content });
+
+                addChatMessage('system', 'Phase 2: Lead is planning & generating code...');
                 
-                Team Discussion:
-                ${discussion.map(d => `${d.role}: ${d.content}`).join('\n\n')}
+                const leadPrompt = `
+                    User Request: ${prompt}
+                    
+                    Team Discussion:
+                    ${discussion.map(d => `${d.role}: ${d.content}`).join('\n\n')}
 
-                As the Lead, create a brief plan. Then, provide the full HTML/CSS/JS code for the application.
-                YOU MUST use the 'create_database_table' tool to define any database tables needed with mock data.
-                Finally, output the complete HTML code in your response.
-            `;
-            
-            let leadMsg = await callLLM('lead', [
-                { role: "system", content: agents[0].systemPrompt },
-                { role: "user", content: leadPrompt }
-            ]);
+                    As the Lead, create a brief plan. Then, provide the full HTML/CSS/JS code.
+                    YOU MUST use the 'create_database_table' tool to define any database tables needed with mock data.
+                    Finally, output the complete HTML code in your response.
+                `;
+                
+                let leadMsg = await callLLM('lead', [
+                    { role: "system", content: state.agents[0].systemPrompt },
+                    { role: "user", content: leadPrompt }
+                ]);
 
-            document.getElementById(typingEle).remove();
-
-            // Handle Tool Calls (Database)
-            if (leadMsg.tool_calls) {
-                for (const toolCall of leadMsg.tool_calls) {
-                    if (toolCall.function.name === "create_database_table") {
-                        const args = JSON.parse(toolCall.function.arguments);
-                        renderDatabaseTable(args);
-                        conversationState.push({
-                            role: "tool",
-                            tool_call_id: toolCall.id,
-                            name: toolCall.function.name,
-                            content: "Table created successfully"
-                        });
+                // Handle Tool Calls
+                if (leadMsg.tool_calls) {
+                    for (const toolCall of leadMsg.tool_calls) {
+                        if (toolCall.function.name === "create_database_table") {
+                            const args = JSON.parse(toolCall.function.arguments);
+                            renderDatabaseTable(args);
+                            conversationHistory.push({
+                                role: "tool",
+                                tool_call_id: toolCall.id,
+                                name: toolCall.function.name,
+                                content: "Table created successfully"
+                            });
+                        }
                     }
+                    // Call lead again to get final HTML after tool use
+                    conversationHistory.push(leadMsg);
+                    leadMsg = await callLLM('lead', conversationHistory);
                 }
 
-                // Call lead again to get final HTML after tool use
-                typingEle = showTyping('lead');
-                conversationState.push(leadMsg);
-                leadMsg = await callLLM('lead', conversationState);
-                document.getElementById(typingEle).remove();
+                finalLeadCode = leadMsg.content.includes('```html') ? leadMsg.content.split('```html')[1].split('```')[0] : leadMsg.content;
+                
+                const planText = leadMsg.content.split('```html')[0];
+                const planHtml = `
+                    ${planText}
+                    <button onclick="executeBuild()" class="mt-3 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-sm font-bold w-full">
+                        <i class="fa-solid fa-hammer mr-1"></i> Start Build
+                    </button>
+                `;
+                addChatMessage('lead', planHtml);
+                window.currentBuildCode = finalLeadCode;
+
+            } else {
+                // Single Agent Mode
+                addChatMessage('system', 'Generating code...');
+                let leadMsg = await callLLM('lead', [
+                    { role: "system", content: state.agents[0].systemPrompt },
+                    { role: "user", content: prompt + " YOU MUST use the 'create_database_table' tool to define database tables with mock data. Then output complete HTML." }
+                ]);
+
+                if (leadMsg.tool_calls) {
+                    for (const toolCall of leadMsg.tool_calls) {
+                        if (toolCall.function.name === "create_database_table") {
+                            const args = JSON.parse(toolCall.function.arguments);
+                            renderDatabaseTable(args);
+                            conversationHistory.push({
+                                role: "tool",
+                                tool_call_id: toolCall.id,
+                                name: toolCall.function.name,
+                                content: "Table created successfully"
+                            });
+                        }
+                    }
+                    conversationHistory.push(leadMsg);
+                    leadMsg = await callLLM('lead', conversationHistory);
+                }
+
+                finalLeadCode = leadMsg.content.includes('```html') ? leadMsg.content.split('```html')[1].split('```')[0] : leadMsg.content;
+                
+                const planHtml = `
+                    ${leadMsg.content.split('```html')[0]}
+                    <button onclick="executeBuild()" class="mt-3 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-sm font-bold w-full">
+                        <i class="fa-solid fa-hammer mr-1"></i> Start Build
+                    </button>
+                `;
+                addChatMessage('lead', planHtml);
+                window.currentBuildCode = finalLeadCode;
             }
 
-            // Show Plan & Build Button
-            const planHtml = `
-                ${leadMsg.content.split('```html')[0]}
-                <button onclick="executeBuild()" class="mt-3 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-sm font-bold w-full">
-                    <i class="fa-solid fa-hammer mr-1"></i> Start Build
-                </button>
-            `;
-            addChatMessage('lead', planHtml);
-            
-            // Store code for build execution
-            window.currentBuildCode = leadMsg.content.includes('```html') ? leadMsg.content.split('```html')[1].split('```')[0] : leadMsg.content;
+            saveCurrentProject();
         }
 
         function executeBuild() {
-            addChatMessage('system', 'Building application...');
             switchTab('preview');
             const iframe = document.getElementById('preview-frame');
             iframe.srcdoc = window.currentBuildCode || '<h1>No code generated</h1>';
+            saveCurrentProject();
         }
 
-        // --- Database Simulation ---
         function renderDatabaseTable(tableData) {
-            switchTab('db');
             const container = document.getElementById('db-tables-container');
-            
-            // Clear initial message
             if (container.children.length === 1 && container.children[0].className.includes('text-zinc-500')) {
                 container.innerHTML = '';
             }
@@ -450,16 +641,19 @@
             document.getElementById('preview-frame').srcdoc = window.currentBuildCode || '';
         }
 
-        // Enter key support
+        // --- Event Listeners ---
         document.getElementById('user-input').addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                startAgentWorkflow();
+                handleSend();
             }
         });
 
-        // Init
-        switchTab('chat');
+        document.getElementById('setting-agent-mode').addEventListener('change', renderAgentConfigs);
+
+        // --- Init ---
+        loadState();
+        showHome();
     </script>
 </body>
 </html>
