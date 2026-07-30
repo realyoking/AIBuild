@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentBuild - Multi-Agent AI Builder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #e5e5e5; }
+        .glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+        .thread-line { border-left: 2px solid #333; padding-left: 12px; margin-left: 12px; }
+        .typing span { display: inline-block; width: 6px; height: 6px; background: #555; border-radius: 50%; animation: blink 1.4s infinite both; margin-right: 2px;}
+        .typing span:nth-child(2) { animation-delay: .2s; }
+        .typing span:nth-child(3) { animation-delay: .4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Nav -->
+    <header class="bg-zinc-900/80 backdrop-blur border-b border-zinc-800 p-3 flex items-center justify-between z-50">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-violet-600 rounded-lg flex items-center justify-center glow">
+                <i class="fa-solid fa-robot text-white text-sm"></i>
+            </div>
+            <h1 class="text-base font-bold tracking-wide hidden sm:block">AgentBuild</h1>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button onclick="switchTab('chat')" id="btn-chat" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800 text-white">
+                <i class="fa-solid fa-comments sm:mr-1"></i> <span class="hidden sm:inline">Chat</span>
+            </button>
+            <button onclick="switchTab('preview')" id="btn-preview" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 text-zinc-400">
+                <i class="fa-solid fa-eye sm:mr-1"></i> <span class="hidden sm:inline">Preview</span>
+            </button>
+            <button onclick="switchTab('db')" id="btn-db" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800/50 text-zinc-400">
+                <i class="fa-solid fa-database sm:mr-1"></i> <span class="hidden sm:inline">Database</span>
+            </button>
+        </div>
+
+        <button onclick="openSettings()" class="text-xs sm:text-sm px-3 py-1.5 rounded-md bg-zinc-800 hover:bg-zinc-700">
+            <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline ml-1">Agents</span>
+        </button>
+    </header>
+
+    <!-- Main Content -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Chat Panel -->
+        <aside id="panel-chat" class="w-full md:w-[420px] flex-shrink-0 bg-zinc-950 border-r border-zinc-800 flex flex-col">
+            <div id="chat-history" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <div class="bg-zinc-900 p-3 rounded-lg max-w-[90%]">
+                    <p class="text-sm text-zinc-300">Welcome to AgentBuild. Configure your AI team in settings, then tell them what to build. They will discuss, plan, and wait for your approval to build.</p>
+                </div>
+            </div>
+
+            <div class="p-3 border-t border-zinc-800">
+                <div class="bg-zinc-800 rounded-lg p-2 flex flex-col">
+                    <textarea id="user-input" placeholder="e.g. Build an online shoe store..." class="bg-transparent text-sm p-2 resize-none focus:outline-none h-16"></textarea>
+                    <div class="flex justify-between items-center mt-2 px-2">
+                        <span class="text-xs text-zinc-500">Multi-Agent Mode</span>
+                        <button id="send-btn" onclick="startAgentWorkflow()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-bold transition">
+                            Send <i class="fa-solid fa-paper-plane ml-1"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Right Side Panel (Preview & DB) -->
+        <main class="flex-1 hidden md:flex flex-col overflow-hidden">
+            <!-- Preview Sub-panel -->
+            <div id="panel-preview" class="flex-1 bg-white overflow-hidden flex flex-col">
+                <div class="bg-zinc-900 p-2 flex justify-between items-center text-xs text-zinc-400 px-4">
+                    <span><i class="fa-solid fa-circle text-green-500 mr-1"></i> Live Preview</span>
+                    <button onclick="refreshIframe()" class="hover:text-white"><i class="fa-solid fa-rotate-right"></i></button>
+                </div>
+                <iframe id="preview-frame" class="w-full flex-1 border-none"></iframe>
+            </div>
+
+            <!-- DB Sub-panel -->
+            <div id="panel-db" class="hidden flex-1 overflow-auto bg-zinc-950 p-4">
+                <div class="max-w-full overflow-x-auto">
+                    <h3 class="text-lg font-bold mb-4 text-white">Simulated Database Schema & Data</h3>
+                    <div id="db-tables-container" class="space-y-6">
+                        <div class="text-zinc-500 text-sm">The AI will generate database tables and mock data here when building your app.</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4">
+        <div class="bg-zinc-900 rounded-xl border border-zinc-800 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div class="sticky top-0 bg-zinc-900 p-4 border-b border-zinc-800 flex justify-between items-center">
+                <h2 class="text-xl font-bold">Agent Settings</h2>
+                <button onclick="closeSettings()" class="text-zinc-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+            </div>
+            
+            <div class="p-4 space-y-4">
+                <!-- Global API Config -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-xs text-zinc-400 block mb-1">Global API Base URL</label>
+                        <input id="setting-base-url" type="text" value="https://api.openai.com/v1" class="w-full bg-zinc-800 text-sm px-3 py-2 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
+                    </div>
+                    <div>
+                        <label class="text-xs text-zinc-400 block mb-1">Global API Key</label>
+                        <input id="setting-api-key" type="password" placeholder="sk-..." class="w-full bg-zinc-800 text-sm px-3 py-2 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
+                    </div>
+                </div>
+
+                <hr class="border-zinc-800">
+
+                <p class="text-sm text-zinc-400">Configure your agents. Each can use a different model.</p>
+                
+                <div id="agents-config-container" class="space-y-4">
+                    <!-- Agent configs injected by JS -->
+                </div>
+            </div>
+            
+            <div class="sticky bottom-0 bg-zinc-900 p-4 border-t border-zinc-800 flex justify-end gap-2">
+                <button onclick="closeSettings()" class="px-4 py-2 bg-zinc-800 hover:bg-zinc-700 rounded text-sm">Save & Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const defaultAgents = [
+            { id: 'lead', name: 'Lead', role: 'Leader', model: 'gpt-4o', icon: 'fa-crown', color: 'text-amber-400', systemPrompt: 'You are the Lead Agent. You read the discussion of your team, create a concise plan, and finally write the full HTML/CSS/JS code. You also define the database schema and mock data using tools.' },
+            { id: 'dev', name: 'Dev', role: 'Developer', model: 'gpt-4o-mini', icon: 'fa-code', color: 'text-blue-400', systemPrompt: 'You are the Dev Agent. You suggest technical implementation, libraries, and logic. Keep it brief.' },
+            { id: 'design', name: 'Design', role: 'Designer', model: 'gpt-4o-mini', icon: 'fa-paintbrush', color: 'text-pink-400', systemPrompt: 'You are the Design Agent. You suggest UI/UX, colors, and layout. Keep it brief.' },
+            { id: 'tester', name: 'QA', role: 'Tester', model: 'gpt-4o-mini', icon: 'fa-bug', color: 'text-green-400', systemPrompt: 'You are the QA Agent. You suggest test cases and edge cases to consider. Keep it brief.' }
+        ];
+        let agents = JSON.parse(JSON.stringify(defaultAgents));
+        let conversationState = [];
+
+        // --- UI Switching ---
+        function switchTab(tab) {
+            const panels = ['chat', 'preview', 'db'];
+            panels.forEach(p => {
+                document.getElementById(`panel-${p}`).classList.add('hidden');
+                document.getElementById(`panel-${p}`).classList.remove('flex');
+                if(p === 'preview' || p === 'db') document.getElementById(`panel-${p}`).classList.remove('md:flex');
+                
+                const btn = document.getElementById(`btn-${p}`);
+                btn.classList.remove('bg-zinc-800', 'text-white');
+                btn.classList.add('bg-zinc-800/50', 'text-zinc-400');
+            });
+            
+            const panel = document.getElementById(`panel-${tab}`);
+            panel.classList.remove('hidden');
+            if(tab === 'chat') {
+                panel.classList.add('flex');
+                document.getElementById(`btn-${tab}`).classList.add('bg-zinc-800', 'text-white');
+            } else {
+                panel.classList.add('flex', 'md:flex');
+                document.getElementById(`btn-${tab}`).classList.add('bg-zinc-800', 'text-white');
+            }
+        }
+
+        // --- Settings Modal ---
+        function openSettings() {
+            renderAgentConfigs();
+            document.getElementById('settings-modal').classList.remove('hidden');
+        }
+
+        function closeSettings() {
+            saveAgentConfigs();
+            document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function renderAgentConfigs() {
+            const container = document.getElementById('agents-config-container');
+            container.innerHTML = '';
+            agents.forEach((agent, index) => {
+                const div = document.createElement('div');
+                div.className = 'bg-zinc-800 p-3 rounded-lg';
+                div.innerHTML = `
+                    <div class="flex items-center gap-2 mb-2">
+                        <i class="fa-solid ${agent.icon} ${agent.color}"></i>
+                        <input type="text" value="${agent.name}" data-index="${index}" data-field="name" class="bg-transparent font-bold text-white text-sm outline-none border-b border-transparent focus:border-blue-500">
+                        <span class="text-xs text-zinc-500 ml-auto">${agent.role}</span>
+                    </div>
+                    <input type="text" value="${agent.model}" data-index="${index}" data-field="model" placeholder="Model (e.g. gpt-4o)" class="w-full bg-zinc-900 text-sm px-2 py-1 rounded border border-zinc-700 focus:outline-none focus:border-blue-500">
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function saveAgentConfigs() {
+            const inputs = document.querySelectorAll('#agents-config-container input');
+            inputs.forEach(input => {
+                const index = input.dataset.index;
+                const field = input.dataset.field;
+                agents[index][field] = input.value;
+            });
+        }
+
+        // --- Chat UI ---
+        function addChatMessage(sender, content, isThread = false, parentRole = null) {
+            const history = document.getElementById('chat-history');
+            const div = document.createElement('div');
+            
+            if (sender === 'user') {
+                div.className = 'bg-blue-600/20 ml-auto p-3 rounded-lg max-w-[90%] border border-blue-800/50';
+                div.innerHTML = `<p class="text-sm text-blue-100">${content}</p>`;
+            } else if (sender === 'system') {
+                div.className = 'bg-zinc-800 p-2 rounded-lg max-w-[90%] text-center';
+                div.innerHTML = `<p class="text-xs text-zinc-400">${content}</p>`;
+            } else {
+                const agent = agents.find(a => a.id === sender);
+                if (isThread) {
+                    div.className = 'thread-line my-2';
+                    div.innerHTML = `
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
+                            <span class="text-xs font-bold ${agent.color}">${agent.name}</span>
+                        </div>
+                        <p class="text-sm text-zinc-300 whitespace-pre-line">${content}</p>
+                    `;
+                } else {
+                    div.className = 'bg-zinc-900 p-3 rounded-lg max-w-[90%]';
+                    div.innerHTML = `
+                        <div class="flex items-center gap-1.5 mb-1">
+                            <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
+                            <span class="text-xs font-bold ${agent.color}">${agent.name}</span>
+                        </div>
+                        <p class="text-sm text-zinc-300 whitespace-pre-line">${content}</p>
+                    `;
+                }
+            }
+            history.appendChild(div);
+            history.scrollTop = history.scrollHeight;
+            return div;
+        }
+
+        function showTyping(agentId, isThread = false) {
+            const agent = agents.find(a => a.id === agentId);
+            const history = document.getElementById('chat-history');
+            const div = document.createElement('div');
+            div.id = `typing-${agentId}-${Math.random().toString(36).substr(2,5)}`;
+            
+            if (isThread) {
+                div.className = 'thread-line my-2';
+            } else {
+                div.className = 'bg-zinc-900 p-3 rounded-lg max-w-[90%]';
+            }
+            
+            div.innerHTML = `
+                <div class="flex items-center gap-1.5">
+                    <i class="fa-solid ${agent.icon} ${agent.color} text-xs"></i>
+                    <span class="text-xs font-bold ${agent.color}">${agent.name} is thinking</span>
+                    <div class="typing"><span></span><span></span><span></span></div>
+                </div>
+            `;
+            history.appendChild(div);
+            history.scrollTop = history.scrollHeight;
+            return div.id;
+        }
+
+        // --- API & Agent Logic ---
+        async function callLLM(agentId, messages) {
+            const agent = agents.find(a => a.id === agentId);
+            const baseUrl = document.getElementById('setting-base-url').value;
+            const apiKey = document.getElementById('setting-api-key').value;
+
+            if (!apiKey) return "Error: API Key not set in Agent Settings.";
+
+            const tools = [
+                {
+                    type: "function",
+                    function: {
+                        name: "create_database_table",
+                        description: "Create a database table with mock data for the application being built.",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                table_name: { type: "string" },
+                                columns: { type: "array", items: { type: "string" } },
+                                rows: { type: "array", items: { type: "array", items: { type: "string" } } }
+                            },
+                            required: ["table_name", "columns", "rows"]
+                        }
+                    }
+                }
+            ];
+
+            try {
+                const res = await fetch(`${baseUrl}/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: agent.model,
+                        messages: messages,
+                        tools: tools,
+                        tool_choice: "auto"
+                    })
+                });
+                const data = await res.json();
+                return data.choices[0].message;
+            } catch (e) {
+                return { content: "API Error: " + e.message };
+            }
+        }
+
+        async function startAgentWorkflow() {
+            const input = document.getElementById('user-input');
+            const prompt = input.value.trim();
+            if (!prompt) return;
+
+            addChatMessage('user', prompt);
+            input.value = '';
+            conversationState = [{ role: "user", content: prompt }];
+
+            // 1. Discussion Phase
+            addChatMessage('system', 'Phase 1: Team Discussion...');
+            const discussion = [];
+
+            // Dev
+            let typingEl = showTyping('dev', true);
+            let devMsg = await callLLM('dev', [{ role: "system", content: agents[1].systemPrompt }, ...conversationState]);
+            document.getElementById(typingEle).remove();
+            addChatMessage('dev', devMsg.content, true);
+            discussion.push({ role: "Dev", content: devMsg.content });
+
+            // Design
+            typingEle = showTyping('design', true);
+            let designMsg = await callLLM('design', [{ role: "system", content: agents[2].systemPrompt }, ...conversationState]);
+            document.getElementById(typingEle).remove();
+            addChatMessage('design', designMsg.content, true);
+            discussion.push({ role: "Design", content: designMsg.content });
+
+            // Tester
+            typingEle = showTyping('tester', true);
+            let testerMsg = await callLLM('tester', [{ role: "system", content: agents[3].systemPrompt }, ...conversationState]);
+            document.getElementById(typingEle).remove();
+            addChatMessage('tester', testerMsg.content, true);
+            discussion.push({ role: "QA", content: testerMsg.content });
+
+            // 2. Lead Planning Phase
+            addChatMessage('system', 'Phase 2: Lead is reviewing & planning...');
+            typingEle = showTyping('lead');
+            
+            const leadPrompt = `
+                User Request: ${prompt}
+                
+                Team Discussion:
+                ${discussion.map(d => `${d.role}: ${d.content}`).join('\n\n')}
+
+                As the Lead, create a brief plan. Then, provide the full HTML/CSS/JS code for the application.
+                YOU MUST use the 'create_database_table' tool to define any database tables needed with mock data.
+                Finally, output the complete HTML code in your response.
+            `;
+            
+            let leadMsg = await callLLM('lead', [
+                { role: "system", content: agents[0].systemPrompt },
+                { role: "user", content: leadPrompt }
+            ]);
+
+            document.getElementById(typingEle).remove();
+
+            // Handle Tool Calls (Database)
+            if (leadMsg.tool_calls) {
+                for (const toolCall of leadMsg.tool_calls) {
+                    if (toolCall.function.name === "create_database_table") {
+                        const args = JSON.parse(toolCall.function.arguments);
+                        renderDatabaseTable(args);
+                        conversationState.push({
+                            role: "tool",
+                            tool_call_id: toolCall.id,
+                            name: toolCall.function.name,
+                            content: "Table created successfully"
+                        });
+                    }
+                }
+
+                // Call lead again to get final HTML after tool use
+                typingEle = showTyping('lead');
+                conversationState.push(leadMsg);
+                leadMsg = await callLLM('lead', conversationState);
+                document.getElementById(typingEle).remove();
+            }
+
+            // Show Plan & Build Button
+            const planHtml = `
+                ${leadMsg.content.split('```html')[0]}
+                <button onclick="executeBuild()" class="mt-3 bg-green-600 hover:bg-green-500 text-white px-4 py-2 rounded text-sm font-bold w-full">
+                    <i class="fa-solid fa-hammer mr-1"></i> Start Build
+                </button>
+            `;
+            addChatMessage('lead', planHtml);
+            
+            // Store code for build execution
+            window.currentBuildCode = leadMsg.content.includes('```html') ? leadMsg.content.split('```html')[1].split('```')[0] : leadMsg.content;
+        }
+
+        function executeBuild() {
+            addChatMessage('system', 'Building application...');
+            switchTab('preview');
+            const iframe = document.getElementById('preview-frame');
+            iframe.srcdoc = window.currentBuildCode || '<h1>No code generated</h1>';
+        }
+
+        // --- Database Simulation ---
+        function renderDatabaseTable(tableData) {
+            switchTab('db');
+            const container = document.getElementById('db-tables-container');
+            
+            // Clear initial message
+            if (container.children.length === 1 && container.children[0].className.includes('text-zinc-500')) {
+                container.innerHTML = '';
+            }
+
+            const tableDiv = document.createElement('div');
+            tableDiv.className = 'bg-zinc-900 rounded-lg p-4 border border-zinc-800';
+            
+            let tableHTML = `
+                <h4 class="text-sm font-bold text-blue-400 mb-2"><i class="fa-solid fa-table mr-1"></i> ${tableData.table_name}</h4>
+                <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="border-b border-zinc-700">
+                        <tr>
+                            ${tableData.columns.map(c => `<th class="py-2 px-3 text-zinc-400 font-medium">${c}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableData.rows.map(row => `
+                            <tr class="border-b border-zinc-800 hover:bg-zinc-800/50">
+                                ${row.map(cell => `<td class="py-2 px-3 text-zinc-300">${cell}</td>`).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                </div>
+            `;
+            
+            tableDiv.innerHTML = tableHTML;
+            container.appendChild(tableDiv);
+        }
+
+        function refreshIframe() {
+            document.getElementById('preview-frame').srcdoc = window.currentBuildCode || '';
+        }
+
+        // Enter key support
+        document.getElementById('user-input').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                startAgentWorkflow();
+            }
+        });
+
+        // Init
+        switchTab('chat');
+    </script>
+</body>
+</html>
